@@ -1,0 +1,6 @@
+/ivy
+/jacoco
+/lib
+/build
+/.idea
+/target
