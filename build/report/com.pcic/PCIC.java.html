@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PCIC.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">hw10</a> &gt; <a href="index.source.html" class="el_package">com.pcic</a> &gt; <span class="el_source">PCIC.java</span></div><h1>PCIC.java</h1><pre class="source lang-java linenums">package com.pcic;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+<span class="fc" id="L8">public class PCIC {</span>
+
+    //list of devices in the motherboard
+<span class="fc" id="L11">    private List&lt;Device&gt; devices = new ArrayList&lt;&gt;();</span>
+
+    /**
+     * device
+     * receiverId
+     * portMapping
+     * */
+    public void addDevice(Device device) {
+<span class="fc" id="L19">        devices.add(device);</span>
+<span class="fc" id="L20">    }</span>
+
+
+    /**
+     *portNumber
+     * */
+    public void sendMessage(Message message) {
+<span class="fc" id="L27">        int receiverId = message.getReceiverIdentifier().getId();</span>
+        //iterate
+<span class="fc bfc" id="L29" title="All 2 branches covered.">        for (Device device : devices) {</span>
+
+<span class="pc bpc" id="L31" title="1 of 4 branches missed.">            if (device.getReceiverIdentifier().getId() == receiverId || device.getReceiverIdentifier().getId() == -1) {</span>
+<span class="fc bfc" id="L32" title="All 2 branches covered.">                if (device instanceof BroadcastDevice) {</span>
+<span class="fc" id="L33">                    device.sendMessage(message);</span>
+                } else {
+<span class="pc bpc" id="L35" title="1 of 2 branches missed.">                    if (device.getReceiverIdentifier().getId() == receiverId) {</span>
+<span class="fc" id="L36">                        device.receiveMessage(message);</span>
+                    }
+                }
+            }
+<span class="fc" id="L40">        }</span>
+<span class="fc" id="L41">    }</span>
+
+    public void receiveMessage(Message message) {
+<span class="nc" id="L44">        sendMessage(message);</span>
+<span class="nc" id="L45">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.10.202304030907</span></div></body></html>

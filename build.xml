@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project
+        xmlns:ivy="antlib:org.apache.ivy.ant"
+        xmlns:jacoco="antlib:org.jacoco.ant"
+        name="pcic" basedir="." default="main">
+
+    <property name="src.dir"     value="src/main/java"/>
+    <property name="test.dir"     value="src/test/java"/>
+<!--  这里先指定系统环境变量  -->
+    <property environment="SystemVariable" />
+    <property name="ivy.install.version" value="2.5.1"/>
+    <property name="build.dir"   value="build"/>
+    <property name="classes.dir" value="${build.dir}/classes"/>
+    <property name="classes.test.dir" value="${build.dir}/test-classes"/>
+    <property name="jar.dir"     value="${build.dir}/jar"/>
+    <property name="ivy.jar.dir" value="ivy"/>
+    <property name="ivy.jar.file" value="${ivy.jar.dir}/ivy.jar"/>
+<!--    取环境变量内容 -->
+    <property name="JACOCO.HOME" value="${SystemVariable.JACOCO_HOME}"/>
+
+    <property name="main-class"  value="com.pcic.Main"/>
+
+    <target name="check-for-ivy">
+        <available property="ivy.downloaded" file="${ivy.jar.file}"/>
+    </target>
+
+    <target name="download-ivy" depends="check-for-ivy" unless="ivy.downloaded">
+        <mkdir dir="${ivy.jar.dir}"/>
+        <get src="https://repo1.maven.org/maven2/org/apache/ivy/ivy/${ivy.install.version}/ivy-${ivy.install.version}.jar" dest="${ivy.jar.file}" usetimestamp="true"/>
+    </target>
+
+    <target name="install-ivy" depends="download-ivy">
+        <path id="ivy.lib.path">
+            <fileset dir="${ivy.jar.dir}" includes="*.jar"/>
+        </path>
+        <taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib:org.apache.ivy.ant" classpathref="ivy.lib.path"/>
+    </target>
+
+    <!-- ivy start -->
+    <target name="resolve" depends="install-jacoco" description="retrieve dependencies with ivy">
+        <echo message="Getting dependencies..." />
+        <ivy:retrieve />
+        <ivy:cachepath pathid="compile.path" conf="compile" />
+        <ivy:cachepath pathid="runtime.path" conf="runtime" />
+        <ivy:cachepath pathid="test.path" conf="test" />
+    </target>
+
+    <!-- jacoco variable -->
+    <property name="jacoco.dir" value="jacoco"/>
+    <property name="jacoco.zipname" value="${ivy.jar.dir}/jacoco.zip"/>
+    <target name="check-for-jacoco" depends="install-ivy">
+        <available property="jacoco.downloaded" file="${jacoco.zipname}"/>
+    </target>
+
+    <target name="download-jacoco" depends="check-for-jacoco" unless="jacoco.downloaded">
+        <mkdir dir="${jacoco.dir}"/>
+        <get src="https://repo1.maven.org/maven2/org/jacoco/jacoco/0.8.8/jacoco-0.8.8.zip" dest="${jacoco.zipname}" usetimestamp="true"/>
+    </target>
+
+    <target name="install-jacoco" depends="download-jacoco">
+        <unzip src="${jacoco.zipname}" dest="${jacoco.dir}"></unzip>
+        <path id="jacoco.lib.path">
+            <fileset dir="${jacoco.dir}" includes="*.jar"/>
+        </path>
+    </target>
+
+    <target name="clean">
+        <delete dir="${build.dir}"/>
+        <delete dir="lib"/>
+    </target>
+
+    <target name="compile" depends="resolve">
+        <mkdir dir="${build.dir}"/>
+        <mkdir dir="${classes.dir}"/>
+        <mkdir dir="${jar.dir}"/>
+        <mkdir dir="${classes.test.dir}"/>
+        <javac debug="true" srcdir="${src.dir}" destdir="${classes.dir}">
+            <src path="${src.dir}" />
+        </javac>
+        <javac debug="true" srcdir="${test.dir}" destdir="${classes.test.dir}">
+            <classpath>
+                <pathelement location="${classes.dir}" />
+            </classpath>
+            <classpath path="lib/*"/>
+            <classpath refid="test.path" />
+            <src path="${test.dir}" />
+        </javac>
+    </target>
+
+    <target name="test" depends="compile">
+        <junit printsummary="on" haltonfailure="no">
+            <classpath>
+                <pathelement location="${classes.dir}" />
+            </classpath>
+            <classpath refid="test.path" />
+            <formatter type="plain" usefile="false" />
+            <test name="GeologicTest" />
+        </junit>
+    </target>
+
+    <taskdef uri="antlib:org.jacoco.ant" resource="org/jacoco/ant/antlib.xml">
+        <classpath path="${jacoco.dir}/lib/jacocoant.jar"/>
+    </taskdef>
+
+    <!-- report 任务  -->
+    <!--    java -jar jacococli.jar report jacoco.exec &#45;&#45;classfiles F:\ord\hw7\target\classes &#45;&#45;sourcefiles F:\ord\hw7\src\main\java &#45;&#45;html html-report-->
+    <target name="report" depends="compile">
+        <!-- 测试覆盖率，生成jacoco.exec  -->
+        <jacoco:coverage destfile="${build.dir}/jacoco.exec">
+            <junit fork="true" forkmode="once">
+                <!-- 指定jar  -->
+                <classpath path="lib/*"/>
+                <classpath>
+                    <pathelement location="${classes.dir}" />
+                    <pathelement location="${classes.test.dir}" />
+                </classpath>
+                <classpath refid="test.path" />
+<!--                <test name="sortingTest.java"/>-->
+                <formatter type="plain" usefile="false" />
+                <!-- 指定测试文件 -->
+                <batchtest todir="${classes.test.dir}">
+                    <fileset dir="${classes.test.dir}">
+                        <include name="**/*Test*.class"/>
+                    </fileset>
+                    <fileset dir="${test.dir}">
+                        <include name="**/*Test*.java"/>
+                    </fileset>
+                </batchtest>
+            </junit>
+        </jacoco:coverage>
+
+        <!-- 生成报告  -->
+        <jacoco:report>
+            <!-- 加载exec文件  -->
+            <executiondata>
+                <file file="${build.dir}/jacoco.exec"/>
+            </executiondata>
+            <!-- 选择源文件与编译后的文件  -->
+            <structure name="hw10">
+                <classfiles>
+                    <fileset dir="${classes.dir}"/>
+                </classfiles>
+                <sourcefiles encoding="UTF-8">
+                    <fileset dir="src/main/java"/>
+                </sourcefiles>
+            </structure>
+            <!-- 生成html格式的报告  -->
+            <html encoding="UTF-8" destdir="${build.dir}/report"/>
+        </jacoco:report>
+    </target>
+
+    <target name = "doc">
+        <javadoc sourcepath="${src.dir}" private="true" windowtitle="com.pcic.PCIC Application"
+                 use="true"
+                 packagenames="com.pcic.*" destdir="${build.dir}/doc"
+                 charset="UTF-8" docencoding="UTF-8" encoding="UTF-8"
+        >
+            <doctitle><![CDATA[= com.pcic.PCIC Application =]]></doctitle>
+            <bottom>
+                <![CDATA[Copyright © 2023. All Rights Reserved.]]>
+            </bottom>
+            <classpath path="${classes.dir}"></classpath>
+        </javadoc>
+        <echo message = "java doc has been generated!" />
+    </target>
+
+    <target name="jar" depends="compile">
+        <mkdir dir="${jar.dir}"/>
+        <jar destfile="${jar.dir}/${ant.project.name}.jar" basedir="${classes.dir}">
+            <manifest>
+                <attribute name="com.pcic.Main-Class" value="${main-class}"/>
+            </manifest>
+        </jar>
+    </target>
+
+    <target name="run" depends="jar">
+        <java jar="${jar.dir}/${ant.project.name}.jar" fork="true"/>
+    </target>
+
+    <target name="clean-build" depends="clean,jar"/>
+
+    <target name="main" depends="clean,run"/>
+
+</project>
